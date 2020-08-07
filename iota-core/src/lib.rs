@@ -13,6 +13,7 @@ pub use iota_client as client;
 pub use iota_crypto_preview as crypto;
 pub use iota_signing_preview as signing;
 pub use iota_ternary_preview as ternary;
+pub use bee_transaction as transaction;
 
 pub use client::Client;
 

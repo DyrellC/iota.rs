@@ -16,6 +16,7 @@ iota-signing-preview = "0.1"
 iota-crypto-preview = "0.1"
 iota-client = { version = "0.5.0-alpha", path = "../iota-client" }
 iota-conversion = { version = "0.5.1", path = "../iota-conversion" }
+bee-transaction = { git = "https://github.com/DyrellC/bee-p.git" }
 
 [features]
 quorum = ["iota-client/quorum"]
