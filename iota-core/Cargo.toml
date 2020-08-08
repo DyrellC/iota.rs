@@ -10,7 +10,7 @@ license = "MIT"
 name = "iota"
 
 [dependencies]
-bee-transaction = { git = "https://github.com/DyrellC/bee-p.git" , rev = "077c762"}
+bee-transaction = { git = "https://github.com/DyrellC/bee-p.git" , rev = "75ab615"}
 bee-ternary = { version = "0.3.1-alpha", git = "https://github.com/iotaledger/bee.git", features = ["serde1"] }
 bee-signing = { git = "https://github.com/iotaledger/bee.git" }
 bee-crypto = { git = "https://github.com/iotaledger/bee.git" }
