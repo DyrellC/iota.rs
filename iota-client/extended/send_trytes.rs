@@ -50,11 +50,14 @@ impl SendTrytesBuilder {
 
     /// Send SendTrytes request
     pub async fn send(self) -> Result<Vec<Transaction>> {
+        println!("Getting gtta");
         let mut gtta = Client::get_transactions_to_approve().depth(self.depth);
         if let Some(hash) = self.reference {
             gtta = gtta.reference(&hash);
         }
+        println!("Gtta: {:?}", gtta);
         let res = gtta.send().await?;
+        println!("response {}", res.branch_transaction);
         let mut trunk = res.trunk_transaction.as_trits().to_owned();
         let mut trytes = Vec::new();
         for tx in self.trytes {
@@ -68,6 +71,7 @@ impl SendTrytesBuilder {
             );
         }
 
+        println!("Put together the trytes");
         let res = Client::attach_to_tangle()
             .trytes(&trytes)
             .branch_transaction(&res.branch_transaction)
