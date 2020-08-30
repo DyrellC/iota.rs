@@ -56,6 +56,7 @@ impl SendTrytesBuilder {
             gtta = gtta.reference(&hash);
         }
         println!("Gtta: {:?}", gtta);
+        println!("Client: {:?}", Client::get().client);
         let res = gtta.send().await?;
         println!("response {}", res.branch_transaction);
         let mut trunk = res.trunk_transaction.as_trits().to_owned();
