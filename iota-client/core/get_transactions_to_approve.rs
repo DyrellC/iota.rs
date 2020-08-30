@@ -39,11 +39,13 @@ impl GetTransactionsToApproveBuilder {
             "depth": self.depth,
         });
 
+        println!("Got the body");
         if let Some(reference) = self.reference {
             body["reference"] = json!(reference);
         }
 
         let res: GTTAResponseBuilder = response!(body);
+        println!("Res: {:?}", res);
         res.build().await
     }
 }
