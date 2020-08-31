@@ -340,7 +340,7 @@ impl Client {
         let body = json!( {
             "command": "getNodeInfo",
         });
-
+        println!("Ge node info");
         println!("Client: {:?}", Client::get_node().unwrap());
         let res = response!(body);
 
