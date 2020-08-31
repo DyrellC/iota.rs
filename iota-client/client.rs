@@ -337,6 +337,7 @@ impl Client {
 
     /// Gets information about a node.
     pub async fn get_node_info() -> Result<GetNodeInfoResponse> {
+        println!("Making body");
         let body = json!( {
             "command": "getNodeInfo",
         });
