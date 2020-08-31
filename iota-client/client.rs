@@ -341,6 +341,7 @@ impl Client {
             "command": "getNodeInfo",
         });
 
+        println!("Client: {:?}", Client::get_node().unwrap());
         let res = response!(body);
 
         Ok(res)
