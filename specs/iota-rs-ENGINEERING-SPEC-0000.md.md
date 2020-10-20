@@ -13,7 +13,7 @@ Specification of High Level Abstraction API
 * [Builder](#Builder)
 * [General API](#General-API)
     * [Send](#Send)
-    * [FindTransactions](#FindTransactions)
+    * [FindMessages](#FindMessages)
     * [GenerateNewAddress](#GenerateNewAddress)
     * [GetAddresses](#GetAddresses)
     * [GetBalance](#GetBalance)
@@ -23,17 +23,17 @@ Specification of High Level Abstraction API
 * [Bee / IRI API](#Bee-/-IRI-API)
     * [AttachToTangle](#AttachToTangle)
     * [GetInclusionState](#GetInclusionState)
-    * [GetTransactionToApprove](#GetTransactionToApprove)
-    * [GetTrytes](#GetTrytes)
-    * [BroadcastTransactions](#BroadcastTransactions)
-    * [StoreTransactions](#StoreTransactions)
+    * [GetMessagesToApprove](#GetMessagesToApprove)
+    * [GetBytes](#GetBytes)
+    * [BroadcastMessages](#BroadcastMessages)
+    * [StoreMessages](#StoreMessages)
     * [WereAddressesSpentFrom](#WereAddressesSpentFrom)
 * [Objects](#Objects)
     * [Network](#Network)
     * [Hash](#Hash)
     * [Seed](#Seed)
     * [Encoding](#Encoding)
-    * [Transaction](#Transaction)
+    * [Message](#Message)
 
 
 # Introduction
@@ -53,6 +53,8 @@ The data structure to initialize the instance of the Higher level client library
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -60,6 +62,8 @@ The data structure to initialize the instance of the Higher level client library
   </tr>
   <tr>
    <td><strong>network</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>
 <a href="#Network">Network</a>
@@ -83,7 +87,9 @@ export const NODELIST_ENDPOINTS = [
    </td>
   </tr>
   <tr>
-   <td><strong>node </strong>(Optional)
+   <td><strong>node </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>String
    </td>
@@ -91,7 +97,9 @@ export const NODELIST_ENDPOINTS = [
    </td>
   </tr>
   <tr>
-   <td><strong>nodes </strong>(Optional)
+   <td><strong>nodes </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>[String]
    </td>
@@ -99,7 +107,9 @@ export const NODELIST_ENDPOINTS = [
    </td>
   </tr>
   <tr>
-   <td><strong>node_pool_urls </strong>(Optional)
+   <td><strong>node_pool_urls </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>String
    </td>
@@ -107,7 +117,9 @@ export const NODELIST_ENDPOINTS = [
    </td>
   </tr>
   <tr>
-   <td><strong>quorum_size </strong>(Optional)
+   <td><strong>quorum_size </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
@@ -115,26 +127,16 @@ export const NODELIST_ENDPOINTS = [
    </td>
   </tr>
   <tr>
-   <td><strong>quorum_threshold </strong>(Optional)
+   <td><strong>quorum_threshold </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
    <td>The quorum threshold defines the minimum amount of nodes from the quorum pool that need to agree if we want to consider the result true. The default is 50 meaning at least 50% of the nodes need to agree. (so at least 2 out of 3 nodes when the quorum size is 3).
    </td>
   </tr>
-  <tr>
-   <td><strong>state_adapter </strong>(Optional)
-   </td>
-   <td>TODO
-   </td>
-   <td>A overwritable adapter class allowing you to implement a different way to store state over the default way (SQLite?). This feature is not strictly needed but would be great to have.
-   </td>
-  </tr>
 </table>
-
-
-Mwm and checksum_required are removed.
-
 
 ### Return
 
@@ -158,6 +160,8 @@ A generic send function for easily sending data or value transactions.
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -165,6 +169,8 @@ A generic send function for easily sending data or value transactions.
   </tr>
   <tr>
    <td><strong>address</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>
 
@@ -176,6 +182,8 @@ A generic send function for easily sending data or value transactions.
   <tr>
    <td><strong>value</strong>
    </td>
+   <td>&#10004;
+   </td>
    <td>u64
    </td>
    <td>The amount of IOTA to send, in iota. If this is a data only transaction we can ignore this field or provide 0. If the amount of this field is higher than 0 we need to provide a seed as well *
@@ -183,6 +191,8 @@ A generic send function for easily sending data or value transactions.
   </tr>
   <tr>
    <td><strong>seed</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>
 
@@ -192,7 +202,9 @@ A generic send function for easily sending data or value transactions.
    </td>
   </tr>
   <tr>
-   <td><strong>message </strong>(Optional)
+   <td><strong>message </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>String
    </td>
@@ -200,7 +212,9 @@ A generic send function for easily sending data or value transactions.
    </td>
   </tr>
   <tr>
-   <td><strong>local_pow </strong>(Optional)
+   <td><strong>local_pow </strong>
+   </td>
+   <td>&#10008;
    </td>
    <td>bool
    </td>
@@ -208,10 +222,6 @@ A generic send function for easily sending data or value transactions.
    </td>
   </tr>
 </table>
-
-
-External_signer and tag are removed. 
-
 
 ### Return
 
@@ -249,9 +259,9 @@ Following are the steps for implementing this method if provided value is zero:
 *   Broadcast transactions to the tangle using [broadcastTransactions()](https://docs.iota.org/docs/node-software/0.1/iri/references/api-reference#storetransactions).
 
 
-## GetTransaction
+## GetMessage
 
-Retrieve a single transaction object using the transaction hash; Given the variable transaction length/atomic transactions in Chrysalis this will be a more commonly used function over retrieving multiple transactions from a bundle which we won’t have any more with Chrysalis.
+Retrieve a single message object using the message hash; Given the variable transaction length/atomic transactions in Chrysalis this will be a more commonly used function over retrieving multiple transactions from a bundle which we won’t have any more with Chrysalis.
 
 
 ### Parameters
@@ -261,13 +271,17 @@ Retrieve a single transaction object using the transaction hash; Given the varia
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
    </td>
   </tr>
   <tr>
-   <td><strong>transaction_hash</strong>
+   <td><strong>message_hash</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>
 <a href="#Hash">Hash</a>
@@ -278,7 +292,8 @@ Retrieve a single transaction object using the transaction hash; Given the varia
   <tr>
    <td><strong>encoding</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>
 <a href="#Encoding">Encoding</a>
@@ -302,16 +317,14 @@ Following are the steps for implementing this method: \
 
 
 
-*   Validate transaction hash semantics;
-*   Get transaction trytes using [getTrytes()](https://docs.iota.org/docs/node-software/0.1/iri/references/api-reference#gettrytes);
+*   Validate message hash semantics;
+*   Get transaction bytes using [getBytes()](https://docs.iota.org/docs/node-software/0.1/iri/references/api-reference#gettrytes);
 *   Parse transaction trytes to transaction object (See [asTransactionObject()](https://github.com/iotaledger/iota.js/blob/next/packages/transaction-converter/src/index.ts#L236) for parsing trytes to transaction object)
 
 
-## FindTransactions
+## FindMessages
 
-Find multiple transactions using one or multiple fields. If multiple search fields are provided consider the search function to work as a AND implementation.
-
-(transaction_hashes=None, address=None, tag=None, tag_prefix=None, offset=0, limit=100, converter=converters.UTF8)
+Find multiple messages using one or multiple fields. If multiple search fields are provided consider the search function to work as a AND implementation.
 
 
 ### Parameters
@@ -321,6 +334,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -329,7 +344,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td><strong>transaction_hashes</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>
 <a href="#Hash">Hash</a>
@@ -340,7 +356,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td><strong>address</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>
 <a href="#Hash">Hash</a>
@@ -351,7 +368,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td><strong>tag</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>
 <a href="#Hash">Hash</a>
@@ -362,7 +380,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td><strong>offset</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
@@ -372,7 +391,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td><strong>limit</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
@@ -382,7 +402,8 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
   <tr>
    <td><strong>encoding</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>
 <a href="#Encoding">Encoding</a>
@@ -396,7 +417,7 @@ Find multiple transactions using one or multiple fields. If multiple search fiel
 
 ### Return
 
-A list of [Transaction](#Transaction)s
+A list of [Message](#Message)s
 
 
 ### Implementation Details
@@ -427,6 +448,8 @@ Return a valid unused address with checksum.
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -435,6 +458,8 @@ Return a valid unused address with checksum.
   <tr>
    <td><strong>seed</strong>
    </td>
+   <td>&#10004;
+   </td>
    <td>
 <a href="#Seed">Seed</a>
    </td>
@@ -442,31 +467,14 @@ Return a valid unused address with checksum.
    </td>
   </tr>
   <tr>
-   <td><strong>external_signer</strong>
-   </td>
-   <td>TBD
-   </td>
-   <td>Only required for value transfers; this is a draft, see description above. To be defined.
-   </td>
-  </tr>
-  <tr>
    <td><strong>index</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
    <td>Key index to start search at. <strong>Default is 0.</strong>
-   </td>
-  </tr>
-  <tr>
-   <td><strong>security_level</strong>
-<p>
-(Optional)
-   </td>
-   <td>usize
-   </td>
-   <td><strong>Defaults to 2</strong>, the security level for the seed. (probably not needed depending on ed22519 implementation)
    </td>
   </tr>
 </table>
@@ -503,6 +511,8 @@ Return a list of addresses with checksum from the seed regardless of their valid
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -511,6 +521,8 @@ Return a list of addresses with checksum from the seed regardless of their valid
   <tr>
    <td><strong>seed</strong>
    </td>
+   <td>&#10004;
+   </td>
    <td>
 <a href="#Seed">Seed</a>
    </td>
@@ -518,17 +530,10 @@ Return a list of addresses with checksum from the seed regardless of their valid
    </td>
   </tr>
   <tr>
-   <td><strong>external_signer</strong>
-   </td>
-   <td>TBD
-   </td>
-   <td>Only required for value transfers; this is a draft, see description above. To be defined.
-   </td>
-  </tr>
-  <tr>
    <td><strong>start</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
@@ -538,21 +543,12 @@ Return a list of addresses with checksum from the seed regardless of their valid
   <tr>
    <td><strong>end</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>uszie
    </td>
    <td>Key index to end the search. <strong>Default is 20.</strong>
-   </td>
-  </tr>
-  <tr>
-   <td><strong>security_level</strong>
-<p>
-(Optional)
-   </td>
-   <td>usize
-   </td>
-   <td><strong>Defaults to 2</strong>, the security level for the seed. (probably not needed depending on ed22519 implementation)
    </td>
   </tr>
 </table>
@@ -587,6 +583,8 @@ Returns the balance for a provided seed by checking the addresses for a seed up 
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -595,6 +593,8 @@ Returns the balance for a provided seed by checking the addresses for a seed up 
   <tr>
    <td><strong>seed</strong>
    </td>
+   <td>&#10004;
+   </td>
    <td>
 <a href="#Seed">Seed</a>
    </td>
@@ -602,31 +602,14 @@ Returns the balance for a provided seed by checking the addresses for a seed up 
    </td>
   </tr>
   <tr>
-   <td><strong>external_signer</strong>
-   </td>
-   <td>TBD
-   </td>
-   <td>Only required for value transfers; this is a draft, see description above. To be defined.
-   </td>
-  </tr>
-  <tr>
    <td><strong>index</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
    <td>Key index to start search at. <strong>Default is 0.</strong>
-   </td>
-  </tr>
-  <tr>
-   <td><strong>security_level</strong>
-<p>
-(Optional)
-   </td>
-   <td>usize
-   </td>
-   <td><strong>Defaults to 2</strong>, the security level for the seed. (probably not needed depending on ed22519 implementation)
    </td>
   </tr>
 </table>
@@ -663,6 +646,8 @@ Returns the balance in iota for the given addresses; No seed or security level n
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -670,6 +655,8 @@ Returns the balance in iota for the given addresses; No seed or security level n
   </tr>
   <tr>
    <td><strong>addresses</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[Address]
    </td>
@@ -697,7 +684,7 @@ Following are the steps for implementing this method: \
 *   Return the latest balance.
 
 
-## Reattach (or some smarter methods)
+## Reattach
 
 Reattaches transaction for provided transaction hash. 
 
@@ -708,6 +695,8 @@ Reattaches transaction for provided transaction hash.
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -715,6 +704,8 @@ Reattaches transaction for provided transaction hash.
   </tr>
   <tr>
    <td><strong>transaction_hashes</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>
 <a href="#Hash">Hash</a>
@@ -757,6 +748,8 @@ Fetch inclusion states of the given transactions to determine if the transaction
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -764,6 +757,8 @@ Fetch inclusion states of the given transactions to determine if the transaction
   </tr>
   <tr>
    <td><strong>transaction_hashes</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[<a href="#Hash">Hash</a>]
    </td>
@@ -792,14 +787,15 @@ Following are the steps for implementing this method: \
 *   Return the list of transactions state tuples.
 
 
-# Bee / IRI API
+# Bee / Hornet API
 
-API of Bee (and IRI) will still be public. Users who know these relative low level API can still call them directly if they are confident and think it’s good for them.
+API of Bee and Hornet will still be public. Users who know these relative low level API can still call them directly if they are confident and think it’s good for them. Note that both Bee and hornet
+haven't finalized their APIs either. Following items and signatures might change later.
 
 
 ## AttachToTangle
 
-Does proof of work for the given transaction trytes. The `branch_transaction` and `trunk_transaction` parameters are returned from the [GetTransactionToApprove](#GetTransactionToApprove) method.
+Does proof of work for the given transaction trytes. The `branch_transaction` and `trunk_transaction` parameters are returned from the [GetMessagesToApprove](#GetMessagesToApprove) method.
 
 ### Parameters
 
@@ -807,6 +803,8 @@ Does proof of work for the given transaction trytes. The `branch_transaction` an
 <table>
   <tr>
    <td>Field
+   </td>
+   <td>Required
    </td>
    <td>Type
    </td>
@@ -816,23 +814,29 @@ Does proof of work for the given transaction trytes. The `branch_transaction` an
   <tr>
    <td><strong>trunk_transaction</strong>
    </td>
+   <td>&#10004;
+   </td>
    <td>
 <a href="#Hash">Hash</a>
    </td>
-   <td>Trunk transaction hash provided by <a href="#GetTransactionToApprove">GetTransactionToApprove</a>.
+   <td>Trunk transaction hash provided by <a href="#GetMessagesToApprove">GetMessagesToApprove</a>.
    </td>
   </tr>
   <tr>
    <td><strong>branch_transaction</strong>
    </td>
+   <td>&#10004;
+   </td>
    <td>
 <a href="#Hash">Hash</a>
    </td>
-   <td>Branch transaction hash provided by <a href="#GetTransactionToApprove">GetTransactionToApprove</a>.
+   <td>Branch transaction hash provided by <a href="#GetMessagesToApprove">GetMassagesToApprove</a>.
    </td>
   </tr>
   <tr>
    <td><strong>trytes</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[
 <a href="#Transaction">Transaction</a>]
@@ -846,7 +850,7 @@ Does proof of work for the given transaction trytes. The `branch_transaction` an
 
 ### Returns:
 
-List of [Transaction](#Transaction) which are ready to broadcast and store to tangle.
+List of [Message](#Message) objects which are ready to broadcast and store to tangle.
 
 
 ### Implementation Details
@@ -874,6 +878,8 @@ Parameters
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -881,6 +887,8 @@ Parameters
   </tr>
   <tr>
    <td><strong>transaction_hashes</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[<a href="#Hash">Hash</a>]
    </td>
@@ -918,6 +926,8 @@ Parameters
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -926,7 +936,8 @@ Parameters
   <tr>
    <td><strong>depth</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>usize
    </td>
@@ -936,7 +947,8 @@ Parameters
   <tr>
    <td><strong>reference</strong>
 <p>
-(Optional)
+   </td>
+   <td>&#10008;
    </td>
    <td>
 <a href="#Hash">Hash</a>
@@ -963,12 +975,6 @@ Following are the steps for implementing this method: \
 *   Validate reference hash semantics if provided;
 *   Return the transactions tuple.
 
-
-## GetTrytes
-
-TODO Not sure about this yet. I feel like this endpoint should change to something like getTransaction and return a list of [transactions](#Transaction)
-
-
 ## BroadcastTransactions
 
 Broadcast transactions to the connected node. This will be useful if the initial broadcast fails. 
@@ -981,6 +987,8 @@ Broadcast transactions to the connected node. This will be useful if the initial
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -988,6 +996,8 @@ Broadcast transactions to the connected node. This will be useful if the initial
   </tr>
   <tr>
    <td><strong>transactions</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[<a href="#Transaction">Transaction</a>]
    </td>
@@ -1021,6 +1031,8 @@ Store transactions to the connected node.
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -1028,6 +1040,8 @@ Store transactions to the connected node.
   </tr>
   <tr>
    <td><strong>transactions</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[<a href="#Transaction">Transaction</a>]
    </td>
@@ -1061,6 +1075,8 @@ Checks if an address was ever withdrawn from. Will be required for WOTS to Ed255
   <tr>
    <td>Field
    </td>
+   <td>Required
+   </td>
    <td>Type
    </td>
    <td>Description
@@ -1068,6 +1084,8 @@ Checks if an address was ever withdrawn from. Will be required for WOTS to Ed255
   </tr>
   <tr>
    <td><strong>addresses</strong>
+   </td>
+   <td>&#10004;
    </td>
    <td>[Address]
    </td>
@@ -1107,13 +1125,40 @@ Network will be an enumeration with elements of **[mainnet|comnet|devnet]. **Som
 
 ## Hash
 
-A valid IOTA hash which can be treated as many objects like Address, Transaction hash, and more. The inner structure of course will instantiate the actual objects. This serves as a convenient but secure way for users passing parameters.
 
+<table>
+  <tr>
+    <td><strong>Property</strong></td>
+    <td><strong>Required</strong></td>
+    <td><strong>Type</strong></td>
+    <td><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td>seed</td>
+    <td>&#10004;</td>
+    <td>[u8; 32]</td>
+    <td>A valid IOTA hash which can be treated as many objects like Address, Transaction hash, and more. The inner structure of course will instantiate the actual objects. This serves as a convenient but secure way for users passing parameters.</td>
+  </tr>
+</table>
 
 ## Seed
 
-An IOTA seed that inner structure is omitted. Users can create this type by passing a String. It will verify and return an error if it’s not valid.
 
+
+<table>
+  <tr>
+    <td><strong>Property</strong></td>
+    <td><strong>Required</strong></td>
+    <td><strong>Type</strong></td>
+    <td><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td>seed</td>
+    <td>&#10004;</td>
+    <td>[u8; 32]</td>
+    <td>An IOTA seed that inner structure is omitted. Users can create this type by passing a String. It will verify and return an error if it’s not valid.</td>
+  </tr>
+</table>
 
 ## Encoding
 
@@ -1126,20 +1171,67 @@ The converter/encoder used to convert the message into bytes/trytes (whatever th
 *   Encoding::Ascii (legacy fallback to Ascii character to Tryte conversion only, implemented as done in the Typescript/Go/Python lib (current Rust implementation is incomplete and does not include characters beyond alphanumeric).
 
 
-## Transaction
+## Message
 
-The transaction object. If we still use Ternary for encoding it would display this:
+The message object returned by various functions; based on the RFC for the Message object.
 
-
-```
-{
-	'hash': 'transaction_hash_here',
-	'raw_data': 'RAWTRYTESORBYTES',
-	'data': 'This is the raw data converted using the converter, this is what mainly will be used from this object',
-	'address': 'ADDRESSOFTHETX',
-	'created_at': DateTime object,
-	'attached_at': DateTime object,
-	'value': 0,
-	'is_confirmed': true, # magic functionality that either returns true or checks again if the transaction is confirmed now or still not.
-	Other relevant fields depending on atomic transaction spec (trunk, branch tx hashes, nonce, etc, to be defined/completed)
-}
+<table>
+  <tr>
+    <td><strong>Property</strong></td>
+    <td><strong>Required</strong></td>
+    <td><strong>Type</strong></td>
+    <td><strong>Description</strong></td>
+  </tr>
+  <tr>
+    <td>version</td>
+    <td>&#10004;</td>
+    <td>number</td>
+    <td>Message version. Defaults to `1`.</td>
+  </tr>
+  <tr>
+    <td>trunk</td>
+    <td>&#10004;</td>
+    <td>string</td>
+    <td>Message id of the first message this message refers to.</td>
+  </tr>
+  <tr>
+    <td>branch</td>
+    <td>&#10004;</td>
+    <td>string</td>
+    <td>Message id of the second message this message refers to.</td>
+  </tr>
+  <tr>
+    <td>payload_length</td>
+    <td>&#10004;</td>
+    <td>number</td>
+    <td>Length of the payload.</td>
+  </tr>
+    <tr>
+    <td>payload</td>
+    <td>&#10004;</td>
+    <td>
+        <a href="#signedtransactionpayload">SignedTransactionPayload</a> |
+        <a href="#unsigneddatapayload">UnsignedDataPayload</a> |
+        <a href="#signeddatapayload">SignedDataPayload</a>
+    </td>
+    <td>Transaction amount (exposed as a custom type with additional methods).</td>
+  </tr>
+  <tr>
+    <td>timestamp</td>
+    <td>&#10004;</td>
+    <td><a href="#timestamp">Timestamp</a></td>
+    <td>Transaction timestamp (exposed as a custom type with additional methods).</td>
+  </tr>
+  <tr>
+    <td>nonce</td>
+    <td>&#10004;</td>
+    <td>string</td>
+    <td>Transaction nonce.</td>
+  </tr>
+  <tr>
+    <td>confirmed</td>
+    <td>&#10004;</td>
+    <td>boolean</td>
+    <td>Determines if the transaction is confirmed.</td>
+  </tr>
+</table>
