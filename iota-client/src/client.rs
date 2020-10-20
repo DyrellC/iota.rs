@@ -354,7 +354,9 @@ impl Client {
             "hashes": hashes,
         });
 
+        println!("Sending to node for get trytes from iota.rs");
         let res: GetTrytesResponseBuilder = response!(self, body);
+        println!("Got response from node");
         res.build().await
     }
 
