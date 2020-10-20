@@ -95,6 +95,7 @@ impl<'a> FindTransactionsBuilder<'a> {
 
     /// Send findTransactions request
     pub async fn send(self) -> Result<FindTransactionsResponse> {
+        println!("Composing message");
         let mut body = json!({
             "command": "findTransactions",
         });
@@ -116,7 +117,9 @@ impl<'a> FindTransactionsBuilder<'a> {
         }
 
         let client = self.client;
+        println!("Sending Request inside iota.rs");
         let res: FindTransactionsResponseBuilder = response!(client, body);
+        println!("Sent request, building response");
         res.build().await
     }
 }
