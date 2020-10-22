@@ -102,7 +102,7 @@ impl ClientBuilder {
         let client = Client {
             pool: Arc::new(RwLock::new(HashSet::from_iter(self.nodes.into_iter()))),
             sync: Arc::new(RwLock::new(Vec::new())),
-            client: reqwest::Client::new(),
+            client: reqwest::ClientBuilder::new().timeout(std::time::Duration::from_secs(5)).build().unwrap(),
             mwm,
             quorum_size,
             quorum_threshold,

@@ -25,7 +25,6 @@ macro_rules! response {
             .header("Content-Type", "application/json")
             .header("X-IOTA-API-Version", "1")
             .body($body.to_string())
-            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await?
             .json()
