@@ -118,7 +118,17 @@ impl<'a> FindTransactionsBuilder<'a> {
 
         let client = self.client;
         println!("Sending Request inside iota.rs");
-        let res: FindTransactionsResponseBuilder = response!(client, body);
+        let req = self.client
+            .post(self.get_node()?)
+            .header("Content-Type", "application/json")
+            .header("X-IOTA-API-Version", "1")
+            .body(body.to_string())
+            .send();
+
+        println!("Sent the request, now going to await the response...");
+        let req = req.await?;
+        let res: FindTransactionsResponseBuilder =  req.json().await?;
+
         println!("Sent request, building response");
         res.build().await
     }

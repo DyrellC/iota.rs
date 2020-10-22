@@ -355,7 +355,17 @@ impl Client {
         });
 
         println!("Sending to node for get trytes from iota.rs");
-        let res: GetTrytesResponseBuilder = response!(self, body);
+        let req = self.client
+            .post(self.get_node()?)
+            .header("Content-Type", "application/json")
+            .header("X-IOTA-API-Version", "1")
+            .body(body.to_string())
+            .send();
+
+        println!("Sent the request, now going to await the response...");
+        let req = req.await?;
+        let res: GetTrytesResponseBuilder =  req.json().await?;
+
         println!("Got response from node");
         res.build().await
     }
