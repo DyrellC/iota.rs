@@ -30,7 +30,7 @@ impl<'a> GetMessageBuilder<'a> {
         let mut url = self.client.get_node()?;
         url.set_path("api/v1/messages");
         url.set_query(Some(&format!("index={}", index)));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct MessagesWrapper {
@@ -38,7 +38,7 @@ impl<'a> GetMessageBuilder<'a> {
         }
 
         parse_response!(resp, 200 => {
-            let ids = resp.json::<MessagesWrapper>().await?;
+            let ids = resp.into_json::<MessagesWrapper>()?;
             ids.data.message_ids
                 .iter()
                 .map(|s| {
@@ -55,14 +55,14 @@ impl<'a> GetMessageBuilder<'a> {
     pub async fn data(self, message_id: &MessageId) -> Result<Message> {
         let mut url = self.client.get_node()?;
         url.set_path(&format!("api/v1/messages/{}", message_id));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct MessagesWrapper {
             data: MessageDto,
         }
         parse_response!(resp, 200 => {
-            let meta = resp.json::<MessagesWrapper>().await?;
+            let meta = resp.into_json::<MessagesWrapper>()?;
             Ok(
                 Message::try_from(&meta.data).expect("Can't convert MessageDto to Message"))
         })
@@ -73,13 +73,13 @@ impl<'a> GetMessageBuilder<'a> {
     pub async fn metadata(self, message_id: &MessageId) -> Result<MessageMetadata> {
         let mut url = self.client.get_node()?;
         url.set_path(&format!("api/v1/messages/{}/metadata", message_id));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
         #[derive(Debug, Serialize, Deserialize)]
         struct MessagesWrapper {
             data: MessageMetadata,
         }
         parse_response!(resp, 200 => {
-            let meta = resp.json::<MessagesWrapper>().await?;
+            let meta = resp.into_json::<MessagesWrapper>()?;
             Ok(meta.data)
         })
     }
@@ -89,10 +89,10 @@ impl<'a> GetMessageBuilder<'a> {
     pub async fn raw(self, message_id: &MessageId) -> Result<String> {
         let mut url = self.client.get_node()?;
         url.set_path(&format!("api/v1/messages/{}/raw", message_id));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
 
         parse_response!(resp, 200 => {
-            Ok(resp.text().await?)
+            Ok(resp.into_string()?)
         })
     }
 
@@ -100,14 +100,14 @@ impl<'a> GetMessageBuilder<'a> {
     pub async fn children(self, message_id: &MessageId) -> Result<Box<[MessageId]>> {
         let mut url = self.client.get_node()?;
         url.set_path(&format!("api/v1/messages/{}/children", message_id));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct MessagesWrapper {
             data: MessageChildrenResponse,
         }
         crate::parse_response!(resp, 200 => {
-            let meta = resp.json::<MessagesWrapper>().await?;
+            let meta: MessagesWrapper = resp.into_json()?;
             meta.data.children_message_ids
                 .iter()
                 .map(|s| {

@@ -42,9 +42,9 @@ pub enum Error {
     /// Error on Url type conversion
     #[error("Failed to parse node_pool_urls")]
     NodePoolUrlsError,
-    /// Errors from reqwest api call
+    /// Errors from ureq api call
     #[error("{0}")]
-    ReqwestError(#[from] reqwest::Error),
+    UreqError(#[from] ureq::Error),
     /// Hex string convert error
     #[error("{0}")]
     FromHexError(#[from] hex::FromHexError),

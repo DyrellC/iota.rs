@@ -3,7 +3,6 @@
 
 //! Builder of the Client Instance
 use crate::{client::*, error::*};
-use reqwest::Url;
 use tokio::{runtime::Runtime, sync::broadcast::channel};
 
 use std::{
@@ -11,6 +10,8 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
+
+use url::Url;
 
 const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -105,13 +106,19 @@ impl ClientBuilder {
         self
     }
 
+    /// Set a minimum pow score for sending
+    /// Node must have min pow score equal to or less
+    pub fn with_min_pow_score(mut self, score: f64) -> Self {
+        self.network_info.min_pow_score = score;
+        self
+    }
+
     /// Get node list from the node_pool_urls
     pub async fn with_node_pool_urls(mut self, node_pool_urls: &[String]) -> Result<Self> {
         for pool_url in node_pool_urls {
-            let text: String = reqwest::get(pool_url)
-                .await?
-                .text()
-                .await
+            let text: String = ureq::get(pool_url)
+                .call()?
+                .into_string()
                 .map_err(|_| Error::NodePoolUrlsError)?;
             let nodes_details: Vec<NodeDetail> = serde_json::from_str(&text)?;
             for node_detail in nodes_details {
@@ -261,7 +268,6 @@ impl ClientBuilder {
             runtime,
             sync,
             sync_kill_sender: sync_kill_sender.map(Arc::new),
-            client: reqwest::Client::new(),
             #[cfg(feature = "mqtt")]
             mqtt_client: None,
             #[cfg(feature = "mqtt")]

@@ -26,14 +26,14 @@ impl<'a> GetAddressBuilder<'a> {
     pub async fn balance(self, address: &Bech32Address) -> Result<BalanceForAddressResponse> {
         let mut url = self.client.get_node()?;
         url.set_path(&format!("api/v1/addresses/{}", address));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct BalanceWrapper {
             data: BalanceForAddressResponse,
         }
         parse_response!(resp, 200 => {
-            let r = resp.json::<BalanceWrapper>().await?;
+            let r = resp.into_json::<BalanceWrapper>()?;
             Ok(r.data)
         })
     }
@@ -44,14 +44,14 @@ impl<'a> GetAddressBuilder<'a> {
     pub async fn outputs(self, address: &Bech32Address) -> Result<Box<[UTXOInput]>> {
         let mut url = self.client.get_node()?;
         url.set_path(&format!("api/v1/addresses/{}/outputs", address));
-        let resp = reqwest::get(url).await?;
+        let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct OutputWrapper {
             data: OutputsForAddressResponse,
         }
         parse_response!(resp, 200 => {
-            let r = resp.json::<OutputWrapper>().await?.data;
+            let r = resp.into_json::<OutputWrapper>()?.data;
             r.output_ids.iter()
                 .map(|s| {
                     let mut transaction_id = [0u8; 32];

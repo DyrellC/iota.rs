@@ -28,16 +28,15 @@ pub use client::*;
 pub use error::*;
 #[cfg(feature = "mqtt")]
 pub use node::Topic;
-pub use reqwest::Url;
 pub use seed::*;
 
 /// match a response with an expected status code or return the default error variant.
 #[macro_export]
 macro_rules! parse_response {
     ($response:ident, $expected_status:pat => $ok:block) => {{
-        match $response.status().as_u16() {
+        match $response.status() {
             $expected_status => $ok,
-            status => Err(Error::ResponseError(status, $response.text().await?)),
+            status => Err(Error::ResponseError(status, $response.into_string()?)),
         }
     }};
 }
