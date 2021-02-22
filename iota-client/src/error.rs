@@ -16,8 +16,8 @@ pub enum Error {
     #[error("Error when building transaction message")]
     TransactionError,
     /// The wallet account doesn't have enough balance
-    #[error("The wallet account doesn't have enough balance. It only has {0}")]
-    NotEnoughBalance(u64),
+    #[error("The wallet account doesn't have enough balance. It only has {0}, required is {1}")]
+    NotEnoughBalance(u64, u64),
     /// Dust error, for example not enough balance on an address
     #[error("Dust error: {0}")]
     DustError(String),
@@ -76,6 +76,18 @@ pub enum Error {
     /// Address not found
     #[error("Address not found in range {0}")]
     InputAddressNotFound(String),
+    /// Storage adapter not set_path
+    #[cfg(feature = "storage")]
+    #[error("Storage adapter not set {0}")]
+    StorageAdapterNotSet(String),
+    /// Storage error
+    #[cfg(feature = "storage")]
+    #[error("Storage error {0}")]
+    Storage(String),
+    /// Account not found error
+    #[cfg(feature = "storage")]
+    #[error("Account not found")]
+    AccountNotFound,
     /// Crypto.rs error
     #[error("{0}")]
     CryptoError(crypto::Error),

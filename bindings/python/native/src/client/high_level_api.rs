@@ -18,6 +18,7 @@ use std::{
 /// General high level APIs
 #[pymethods]
 impl Client {
+    #[allow(clippy::too_many_arguments)]
     fn message(
         &self,
         seed: Option<String>,
@@ -29,6 +30,7 @@ impl Client {
         outputs: Option<Vec<Output>>,
         dust_allowance_outputs: Option<Vec<Output>>,
         index: Option<&str>,
+        index_raw: Option<&[u8]>,
         data: Option<Vec<u8>>,
         data_str: Option<String>,
         parents: Option<Vec<&str>>,
@@ -55,9 +57,11 @@ impl Client {
                 )?);
             }
         }
-        if input_range_begin.is_some() & input_range_end.is_some() {
-            send_builder = send_builder.with_input_range(input_range_begin.unwrap()..input_range_end.unwrap());
+
+        if let (Some(input_range_begin), Some(input_range_end)) = (input_range_begin, input_range_end) {
+            send_builder = send_builder.with_input_range(input_range_begin..input_range_end);
         }
+
         if let Some(outputs) = outputs {
             for output in outputs {
                 send_builder = send_builder.with_output(&output.address[..].into(), output.amount)?;
@@ -69,7 +73,10 @@ impl Client {
             }
         }
         if let Some(index) = index {
-            send_builder = send_builder.with_index(index);
+            send_builder = send_builder.with_index(index.as_bytes());
+        }
+        if let Some(index_raw) = index_raw {
+            send_builder = send_builder.with_index(index_raw);
         }
         if let Some(data) = data {
             send_builder = send_builder.with_data(data);
@@ -159,7 +166,7 @@ impl Client {
                 .children(&RustMessageId::from_str(message_id)?)
                 .await
         })?;
-        Ok(children.into_iter().map(|child| hex::encode(child.as_ref())).collect())
+        Ok(children.iter().map(|child| hex::encode(child.as_ref())).collect())
     }
     /// Get the list of message indices from the message_id.
     ///
@@ -171,7 +178,7 @@ impl Client {
     fn get_message_index(&self, index: &str) -> Result<Vec<String>> {
         let rt = tokio::runtime::Runtime::new()?;
         let indices = rt.block_on(async { self.client.get_message().index(index).await })?;
-        Ok(indices.into_iter().map(|index| hex::encode(index.as_ref())).collect())
+        Ok(indices.iter().map(|index| hex::encode(index.as_ref())).collect())
     }
     /// Find all messages by provided message IDs.
     ///
@@ -233,30 +240,32 @@ impl Client {
                 ),
             });
         }
-        let mut begin: usize = 0;
-        let mut end: usize = 0;
-        if input_range_begin.is_some() & input_range_end.is_some() {
-            begin = input_range_begin.unwrap();
-            end = input_range_end.unwrap();
-        }
+        let begin: usize = input_range_begin.unwrap_or(0);
+        let end: usize = input_range_end.unwrap_or(0);
         if get_all.unwrap_or(false) {
-            let addresses = self
-                .client
-                .find_addresses(&seed)
-                .with_account_index(account_index.unwrap_or(0))
-                .with_range(begin..end)
-                .get_all()?;
+            let rt = tokio::runtime::Runtime::new()?;
+            let addresses = rt.block_on(async {
+                self.client
+                    .find_addresses(&seed)
+                    .with_account_index(account_index.unwrap_or(0))
+                    .with_range(begin..end)
+                    .get_all()
+                    .await
+            })?;
             Ok(addresses
                 .iter()
                 .map(|address_changed| (address_changed.0.to_string(), Some(address_changed.1)))
                 .collect())
         } else {
-            let addresses = self
-                .client
-                .find_addresses(&seed)
-                .with_account_index(account_index.unwrap_or(0))
-                .with_range(begin..end)
-                .finish()?;
+            let rt = tokio::runtime::Runtime::new()?;
+            let addresses = rt.block_on(async {
+                self.client
+                    .find_addresses(&seed)
+                    .with_account_index(account_index.unwrap_or(0))
+                    .with_range(begin..end)
+                    .finish()
+                    .await
+            })?;
             Ok(addresses
                 .iter()
                 .map(|addresses| (addresses.to_string(), None))

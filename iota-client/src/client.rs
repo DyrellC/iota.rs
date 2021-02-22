@@ -28,6 +28,8 @@ use blake2::{
 };
 #[cfg(feature = "mqtt")]
 use paho_mqtt::Client as MqttClient;
+#[cfg(feature = "mqtt")]
+use tokio::sync::RwLock as AsyncRwLock;
 use tokio::{
     runtime::Runtime,
     sync::broadcast::{Receiver, Sender},
@@ -128,7 +130,7 @@ impl BrokerOptions {
         self
     }
 
-    /// Decid if websockets or tcp will be used for the connection
+    /// Decide if websockets or tcp will be used for the connection
     pub fn use_websockets(mut self, use_ws: bool) -> Self {
         self.use_ws = use_ws;
         self
@@ -242,7 +244,7 @@ pub struct Client {
     #[cfg(feature = "mqtt")]
     pub(crate) mqtt_client: Option<MqttClient>,
     #[cfg(feature = "mqtt")]
-    pub(crate) mqtt_topic_handlers: Arc<RwLock<TopicHandlerMap>>,
+    pub(crate) mqtt_topic_handlers: Arc<AsyncRwLock<TopicHandlerMap>>,
     #[cfg(feature = "mqtt")]
     pub(crate) broker_options: BrokerOptions,
     pub(crate) network_info: Arc<RwLock<NetworkInfo>>,
@@ -275,9 +277,7 @@ impl Drop for Client {
 
         #[cfg(feature = "mqtt")]
         if self.mqtt_client.is_some() {
-            self.subscriber()
-                .disconnect()
-                .expect("failed to disconnect MQTT client");
+            crate::async_runtime::block_on(self.subscriber().disconnect()).expect("failed to disconnect MQTT");
         }
     }
 }
@@ -322,7 +322,7 @@ impl Client {
         let mut synced_nodes = HashSet::new();
         let mut network_nodes: HashMap<String, Vec<(NodeInfo, Url)>> = HashMap::new();
         for node_url in nodes {
-            // Put the healty node url into the network_nodes
+            // Put the healthy node url into the network_nodes
             if let Ok(info) = Client::get_node_info(node_url.clone()).await {
                 if info.is_healthy {
                     match network_nodes.get_mut(&info.network_id) {
@@ -379,29 +379,48 @@ impl Client {
 
     /// Gets the network id of the node we're connecting to.
     pub async fn get_network_id(&self) -> Result<u64> {
-        let network_id = match self.get_network_info().network_id {
-            Some(id) => id,
-            None => {
-                let node_info = self.get_info().await?;
-                let network_id = hash_network(&node_info.network_id);
-                let mut client_network_info = self.network_info.write().unwrap();
-                client_network_info.network_id = Some(network_id);
-                network_id
-            }
-        };
-        Ok(network_id)
+        let network_info = self.get_network_info().await?;
+        Ok(network_info.network_id.unwrap())
     }
 
     /// Gets the miner to use based on the PoW setting
     pub fn get_pow_provider(&self) -> ClientMiner {
-        ClientMinerBuilder::new()
-            .with_local_pow(self.network_info.read().unwrap().local_pow)
-            .finish()
+        ClientMinerBuilder::new().with_local_pow(self.get_local_pow()).finish()
     }
 
     /// Gets the network related information such as network_id and min_pow_score
-    pub fn get_network_info(&self) -> NetworkInfo {
-        self.network_info.read().unwrap().clone()
+    /// and if it's the default one, sync it first.
+    pub async fn get_network_info(&self) -> Result<NetworkInfo> {
+        let not_synced = { self.network_info.read().unwrap().network_id.is_none() };
+        if not_synced {
+            let info = self.get_info().await?;
+            let network_id = hash_network(&info.network_id);
+            let mut client_network_info = self.network_info.write().unwrap();
+            client_network_info.network_id = Some(network_id);
+            client_network_info.min_pow_score = info.min_pow_score;
+            client_network_info.bech32_hrp = info.bech32_hrp;
+        }
+        Ok(self.network_info.read().unwrap().clone())
+    }
+
+    /// returns the bech32_hrp
+    pub async fn get_bech32_hrp(&self) -> Result<String> {
+        Ok(self.get_network_info().await?.bech32_hrp)
+    }
+
+    /// returns the min pow score
+    pub async fn get_min_pow_score(&self) -> Result<f64> {
+        Ok(self.get_network_info().await?.min_pow_score)
+    }
+
+    /// returns the tips interval
+    pub fn get_tips_interval(&self) -> u64 {
+        self.network_info.read().unwrap().tips_interval
+    }
+
+    /// returns the local pow
+    pub fn get_local_pow(&self) -> bool {
+        self.network_info.read().unwrap().local_pow
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -533,7 +552,7 @@ impl Client {
         let mut url = self.get_node()?;
         url.set_path("api/v1/messages");
 
-        let timeout = if self.network_info.read().unwrap().local_pow {
+        let timeout = if self.get_local_pow() {
             self.get_timeout(Api::PostMessage)
         } else {
             self.get_timeout(Api::PostMessageWithRemotePow)
@@ -595,7 +614,7 @@ impl Client {
     }
 
     /// Find all outputs based on the requests criteria. This method will try to query multiple nodes if
-    /// the request amount exceed individual node limit.
+    /// the request amount exceeds individual node limit.
     pub async fn find_outputs(
         &self,
         outputs: &[UTXOInput],
@@ -634,7 +653,7 @@ impl Client {
 
     /// GET /api/v1/milestones/{index} endpoint
     /// Get the milestone by the given index.
-    pub async fn get_milestone(&self, index: u64) -> Result<MilestoneResponse> {
+    pub async fn get_milestone(&self, index: u32) -> Result<MilestoneResponse> {
         let mut url = self.get_node()?;
         url.set_path(&format!("api/v1/milestones/{}", index));
 
@@ -662,7 +681,7 @@ impl Client {
 
     /// GET /api/v1/milestones/{index}/utxo-changes endpoint
     /// Get the milestone by the given index.
-    pub async fn get_milestone_utxo_changes(&self, index: u64) -> Result<MilestoneUTXOChanges> {
+    pub async fn get_milestone_utxo_changes(&self, index: u32) -> Result<MilestoneUTXOChanges> {
         let mut url = self.get_node()?;
         url.set_path(&format!("api/v1/milestones/{}/utxo-changes", index));
 
@@ -703,7 +722,7 @@ impl Client {
         // Post the modified
         let message_id = self.post_message(&reattach_message).await?;
         // Get message if we use remote PoW, because the node will change parents and nonce
-        let msg = match self.get_network_info().local_pow {
+        let msg = match self.get_local_pow() {
             true => reattach_message,
             false => self.get_message().data(&message_id).await?,
         };
@@ -725,16 +744,17 @@ impl Client {
     pub async fn promote_unchecked(&self, message_id: &MessageId) -> Result<(MessageId, Message)> {
         // Create a new message (zero value message) for which one tip would be the actual message
         let tips = self.get_tips().await?;
+        let min_pow_score = self.get_min_pow_score().await?;
         let promote_message = MessageBuilder::<ClientMiner>::new()
             .with_network_id(self.get_network_id().await?)
             .with_parents(vec![*message_id, tips[0]])
-            .with_nonce_provider(self.get_pow_provider(), self.get_network_info().min_pow_score, None)
+            .with_nonce_provider(self.get_pow_provider(), min_pow_score, None)
             .finish()
             .map_err(|_| Error::TransactionError)?;
 
         let message_id = self.post_message(&promote_message).await?;
         // Get message if we use remote PoW, because the node will change parents and nonce
-        let msg = match self.get_network_info().local_pow {
+        let msg = match self.get_local_pow() {
             true => promote_message,
             false => self.get_message().data(&message_id).await?,
         };
@@ -757,11 +777,15 @@ impl Client {
 
     /// Return a list of addresses from the seed regardless of their validity.
     pub fn find_addresses<'a>(&'a self, seed: &'a Seed) -> GetAddressesBuilder<'a> {
-        GetAddressesBuilder::new(self, seed)
+        GetAddressesBuilder::new(seed).with_client(&self)
     }
 
     /// Find all messages by provided message IDs and/or indexation_keys.
-    pub async fn find_messages(&self, indexation_keys: &[String], message_ids: &[MessageId]) -> Result<Vec<Message>> {
+    pub async fn find_messages<I: AsRef<[u8]>>(
+        &self,
+        indexation_keys: &[I],
+        message_ids: &[MessageId],
+    ) -> Result<Vec<Message>> {
         let mut messages = Vec::new();
 
         // Use a `HashSet` to prevent duplicate message_ids.
@@ -775,7 +799,7 @@ impl Client {
         // Use `get_message().index()` API to get the message ID first,
         // then collect the `MessageId` in the HashSet.
         for index in indexation_keys {
-            let message_ids = self.get_message().index(&index).await?;
+            let message_ids = self.get_message().index(index).await?;
             for message_id in message_ids.iter() {
                 message_ids_to_query.insert(message_id.to_owned());
             }
@@ -786,7 +810,6 @@ impl Client {
             let message = self.get_message().data(&message_id).await.unwrap();
             messages.push(message);
         }
-
         Ok(messages)
     }
 

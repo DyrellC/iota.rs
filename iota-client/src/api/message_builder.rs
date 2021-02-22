@@ -3,11 +3,11 @@
 
 use crate::{api::address::search_address, Client, ClientMiner, Error, Result, Seed};
 
-use bee_common::packable::Packable;
 use bee_message::prelude::*;
 use bee_pow::providers::ProviderBuilder;
 use bee_rest_api::types::{AddressDto, OutputDto};
 use slip10::BIP32Path;
+
 use std::{
     collections::{HashMap, HashSet},
     ops::Range,
@@ -19,6 +19,8 @@ use std::{
 };
 
 const HARDEND: u32 = 1 << 31;
+const MAX_ALLOWED_DUST_OUTPUTS: i64 = 100;
+const ADDRESS_GAP_LIMIT: usize = 20;
 
 /// Structure for sorting of UnlockBlocks
 // TODO: move the sorting process to the `Message` crate
@@ -38,7 +40,7 @@ pub struct ClientMessageBuilder<'a> {
     inputs: Option<Vec<UTXOInput>>,
     input_range: Range<usize>,
     outputs: Vec<Output>,
-    index: Option<String>,
+    index: Option<Box<[u8]>>,
     data: Option<Vec<u8>>,
     parents: Option<Vec<MessageId>>,
 }
@@ -124,9 +126,9 @@ impl<'a> ClientMessageBuilder<'a> {
         Ok(self)
     }
 
-    /// Set indexation string to the builder
-    pub fn with_index(mut self, index: &str) -> Self {
-        self.index = Some(index.to_string());
+    /// Set indexation to the builder
+    pub fn with_index<I: AsRef<[u8]>>(mut self, index: I) -> Self {
+        self.index = Some(index.as_ref().into());
         self
     }
 
@@ -176,7 +178,7 @@ impl<'a> ClientMessageBuilder<'a> {
 
         let mut index = self.initial_address_index.unwrap_or(0);
 
-        let bech32_hrp = self.client.get_network_info().bech32_hrp;
+        let bech32_hrp = self.client.get_bech32_hrp().await?;
 
         // store (amount, address, new_created) to check later if dust is allowed
         let mut dust_and_allowance_recorders = Vec::new();
@@ -201,7 +203,7 @@ impl<'a> ClientMessageBuilder<'a> {
         }
 
         let mut paths = Vec::new();
-        let mut essence = TransactionPayloadEssence::builder();
+        let mut essence = RegularEssence::builder();
         let mut address_index_recorders = Vec::new();
 
         match self.inputs.clone() {
@@ -237,6 +239,7 @@ impl<'a> ClientMessageBuilder<'a> {
                             let bech32_address = output_address.to_bech32(&bech32_hrp);
                             let (address_index, internal) = search_address(
                                 &self.seed.expect("No seed"),
+                                bech32_hrp.clone(),
                                 account_index,
                                 self.input_range.clone(),
                                 &bech32_address.into(),
@@ -279,8 +282,9 @@ impl<'a> ClientMessageBuilder<'a> {
                         .client
                         .find_addresses(self.seed.expect("No seed"))
                         .with_account_index(account_index)
-                        .with_range(index..index + 20)
-                        .get_all()?;
+                        .with_range(index..index + ADDRESS_GAP_LIMIT)
+                        .get_all()
+                        .await?;
                     // For each address, get the address outputs
                     let mut address_index = 0;
                     for (index, (address, internal)) in addresses.iter().enumerate() {
@@ -294,8 +298,8 @@ impl<'a> ClientMessageBuilder<'a> {
                         }
                         // If there are more than 20 (gap limit) consecutive empty addresses, then we stop looking
                         // up the addresses belonging to the seed. Note that we don't really count the exact 20
-                        // consecutive empty addresses, which is uncessary. We just need to check the address range,
-                        // [k*20, k*20 + 20), where k is natural number, and to see if the outpus are all empty.
+                        // consecutive empty addresses, which is unnecessary. We just need to check the address range,
+                        // [k*20, k*20 + 20), where k is natural number, and to see if the outputs are all empty.
                         if outputs.is_empty() {
                             // Accumulate the empty_address_count for each run of output address searching
                             empty_address_count += 1;
@@ -379,7 +383,7 @@ impl<'a> ClientMessageBuilder<'a> {
                             address_index += 1;
                         }
                     }
-                    index += 20;
+                    index += ADDRESS_GAP_LIMIT;
                     // The gap limit is 20 and use reference 40 here because there's public and internal addresses
                     if empty_address_count == 40 {
                         break;
@@ -389,7 +393,7 @@ impl<'a> ClientMessageBuilder<'a> {
         }
 
         if total_already_spent < total_to_spend {
-            return Err(Error::NotEnoughBalance(total_to_spend));
+            return Err(Error::NotEnoughBalance(total_already_spent, total_to_spend));
         }
 
         // Check if we would let dust on an address behind or send new dust, which would make the tx unconfirmable
@@ -417,15 +421,12 @@ impl<'a> ClientMessageBuilder<'a> {
         }
         // Add indexation_payload if index set
         if let Some(index) = self.index.clone() {
-            let indexation_payload = IndexationPayload::new(index, &self.data.clone().unwrap_or_default())?;
+            let indexation_payload = IndexationPayload::new(&index, &self.data.clone().unwrap_or_default())?;
             essence = essence.with_payload(Payload::Indexation(Box::new(indexation_payload)))
         }
-        let essence = essence.finish()?;
-        let mut serialized_essence = Vec::new();
-        essence
-            .pack(&mut serialized_essence)
-            .map_err(|_| Error::InvalidParameter("inputs".to_string()))?;
-
+        let regular_essence = essence.finish()?;
+        let essence = Essence::Regular(regular_essence);
+        let hashed_essence = essence.hash();
         let mut unlock_blocks = Vec::new();
         let mut signature_indexes = HashMap::<String, usize>::new();
         address_index_recorders.sort_by(|a, b| a.input.cmp(&b.input));
@@ -433,7 +434,6 @@ impl<'a> ClientMessageBuilder<'a> {
         for (current_block_index, recorder) in address_index_recorders.iter().enumerate() {
             // Check if current path is same as previous path
             // If so, add a reference unlock block
-
             // Format to differentiate between public and private addresses
             let index = format!("{}{}", recorder.address_index, recorder.internal);
             if let Some(block_index) = signature_indexes.get(&index) {
@@ -446,7 +446,7 @@ impl<'a> ClientMessageBuilder<'a> {
                     .generate_private_key(&recorder.address_path)?;
                 let public_key = private_key.public_key().to_compressed_bytes();
                 // The block should sign the entire transaction essence part of the transaction payload
-                let signature = Box::new(private_key.sign(&serialized_essence).to_bytes());
+                let signature = Box::new(private_key.sign(&hashed_essence).to_bytes());
                 unlock_blocks.push(UnlockBlock::Signature(SignatureUnlock::Ed25519(Ed25519Signature::new(
                     public_key, signature,
                 ))));
@@ -460,7 +460,6 @@ impl<'a> ClientMessageBuilder<'a> {
         }
 
         let payload = payload_builder.finish().map_err(|_| Error::TransactionError)?;
-
         // building message
         let payload = Payload::Transaction(Box::new(payload));
 
@@ -476,7 +475,7 @@ impl<'a> ClientMessageBuilder<'a> {
             let data = &self.data.as_ref().unwrap_or(empty_slice);
 
             // build indexation
-            let index = IndexationPayload::new(index.expect("No indexation tag").to_string(), data)
+            let index = IndexationPayload::new(index.expect("No indexation tag"), data)
                 .map_err(|e| Error::IndexationError(e.to_string()))?;
             payload = Payload::Indexation(Box::new(index));
         }
@@ -491,12 +490,14 @@ impl<'a> ClientMessageBuilder<'a> {
             Some(mut parents) => {
                 parents.sort_unstable();
                 parents.dedup();
+                let min_pow_score = self.client.get_min_pow_score().await?;
+                let network_id = self.client.get_network_id().await?;
                 do_pow(
                     crate::client::ClientMinerBuilder::new()
-                        .with_local_pow(self.client.get_network_info().local_pow)
+                        .with_local_pow(self.client.get_local_pow())
                         .finish(),
-                    self.client.get_network_info().min_pow_score,
-                    self.client.get_network_id().await?,
+                    min_pow_score,
+                    network_id,
                     payload,
                     parents,
                     Arc::new(AtomicBool::new(false)),
@@ -504,21 +505,22 @@ impl<'a> ClientMessageBuilder<'a> {
                 .1
                 .unwrap()
             }
-            None => finish_pow(&self.client, payload.clone()).await?,
+            None => finish_pow(&self.client, payload).await?,
         };
 
         let msg_id = self.client.post_message(&final_message).await?;
         // Get message if we use remote PoW, because the node will change parents and nonce
-        let msg = match self.client.get_network_info().local_pow {
+        let msg = match self.client.get_local_pow() {
             true => final_message,
             false => self.client.get_message().data(&msg_id).await?,
         };
+
         Ok(msg)
     }
 }
 
 // Calculate the outputs on this address after this transaction gets confirmed so we know if we can send dust or
-// dust allowance outputs (as input). the bool in the outputs defines if we consume this output (false) or create a new
+// dust allowance outputs (as input), the bool in the outputs defines if we consume this output (false) or create a new
 // one (true)
 async fn is_dust_allowed(client: &Client, address: Bech32Address, outputs: Vec<(u64, Address, bool)>) -> Result<()> {
     // balance of all dust allowance outputs
@@ -566,7 +568,7 @@ async fn is_dust_allowed(client: &Client, address: Bech32Address, outputs: Vec<(
 
     // Here dust_allowance_balance and dust_outputs_amount should be as if this transaction gets confirmed
     // Max allowed dust outputs is 100
-    let allowed_dust_amount = std::cmp::min(dust_allowance_balance / 100_000, 100);
+    let allowed_dust_amount = std::cmp::min(dust_allowance_balance / 100_000, MAX_ALLOWED_DUST_OUTPUTS);
     if dust_outputs_amount > allowed_dust_amount {
         return Err(Error::DustError(format!(
             "No dust output allowed on address {}",
@@ -579,16 +581,16 @@ async fn is_dust_allowed(client: &Client, address: Bech32Address, outputs: Vec<(
 /// Does PoW with always new tips
 pub async fn finish_pow(client: &Client, payload: Option<Payload>) -> Result<Message> {
     let done = Arc::new(AtomicBool::new(false));
-    let local_pow = client.get_network_info().local_pow;
-    let min_pow_score = client.get_network_info().min_pow_score;
-    let tips_interval = client.get_network_info().tips_interval;
+    let local_pow = client.get_local_pow();
+    let min_pow_score = client.get_min_pow_score().await?;
+    let tips_interval = client.get_tips_interval();
     let network_id = client.get_network_id().await?;
     loop {
         let abort1 = Arc::clone(&done);
         let abort2 = Arc::clone(&done);
         let payload_ = payload.clone();
         let parent_messages = client.get_tips().await?;
-        let time_thread = std::thread::spawn(move || pow_timeout(tips_interval, &abort1));
+        let time_thread = std::thread::spawn(move || Ok(pow_timeout(tips_interval, &abort1)));
         let pow_thread = std::thread::spawn(move || {
             do_pow(
                 crate::client::ClientMinerBuilder::new()
@@ -621,10 +623,10 @@ pub async fn finish_pow(client: &Client, payload: Option<Payload>) -> Result<Mes
     }
 }
 
-fn pow_timeout(after_seconds: u64, done: &AtomicBool) -> Result<(u64, Option<Message>)> {
+fn pow_timeout(after_seconds: u64, done: &AtomicBool) -> (u64, Option<Message>) {
     std::thread::sleep(std::time::Duration::from_secs(after_seconds));
     done.swap(true, Ordering::Relaxed);
-    Ok((0, None))
+    (0, None)
 }
 
 /// Does PoW

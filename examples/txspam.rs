@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! cargo run --example txspam --release
-use iota::{Client, MessageId, Payload, Seed, UTXOInput};
+use iota::{Client, Essence, MessageId, Payload, Seed, UTXOInput};
 use tokio::time::sleep;
 extern crate dotenv;
 use dotenv::dotenv;
@@ -13,7 +13,7 @@ use std::{env, time::Duration};
 
 #[tokio::main]
 async fn main() {
-    let iota = Client::builder() // Crate a client instance builder
+    let iota = Client::builder() // Create a client instance builder
         .with_node("http://api.lb-0.testnet.chrysalis2.com") // Insert the node here
         .unwrap()
         .finish()
@@ -31,6 +31,7 @@ async fn main() {
         .with_account_index(0)
         .with_range(0..10)
         .finish()
+        .await
         .unwrap();
 
     let mut message_builder = iota.message().with_seed(&seed);
@@ -49,8 +50,15 @@ async fn main() {
     // Use own outputs directly so we don't double spend them
     let mut initial_outputs = Vec::new();
     if let Some(Payload::Transaction(tx)) = message.payload() {
-        for (index, _output) in tx.essence().outputs().iter().enumerate() {
-            initial_outputs.push(UTXOInput::new(tx.id(), index as u16).unwrap());
+        match tx.essence() {
+            Essence::Regular(essence) => {
+                for (index, _output) in essence.outputs().iter().enumerate() {
+                    initial_outputs.push(UTXOInput::new(tx.id(), index as u16).unwrap());
+                }
+            }
+            _ => {
+                panic!("Unexisting essence type");
+            }
         }
     }
 
@@ -74,7 +82,7 @@ async fn main() {
 async fn reattach_promote_until_confirmed(message_id: MessageId, iota: &Client) {
     while let Ok(metadata) = iota.get_message().metadata(&message_id).await {
         if let Some(state) = metadata.ledger_inclusion_state {
-            println!("Leder inclusion state: {:?}", state);
+            println!("Ledger inclusion state: {:?}", state);
             break;
         } else if let Ok(msg_id) = iota.reattach(&message_id).await {
             println!("Reattached or promoted {}", msg_id.0);
