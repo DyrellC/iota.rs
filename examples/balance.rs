@@ -18,7 +18,7 @@ async fn main() {
         .await
         .unwrap();
 
-    let address = "atoi1qzj86lzml2ktagye4mj0th6zymgka8lt96qre9yye0v8sawzmdu0ut90vm7";
+    let address = "atoi1qzt0nhsf38nh6rs4p6zs5knqp6psgha9wsv74uajqgjmwc75ugupx3y7x0r";
 
     let balance = iota.get_address().balance(&address.into()).await.unwrap();
     println!("The balance of {:?} is {:?}", address, balance);
@@ -31,8 +31,7 @@ async fn main() {
 
     println!("This example uses dotenv, which is not safe for use in production.");
     dotenv().ok();
-    let seed =
-        Seed::from_bytes(&hex::decode(env::var("NONSECURE_USE_OF_DEVELOPMENT_SEED_1").unwrap()).unwrap()).unwrap();
+    let seed = Seed::from_bytes(&hex::decode(env::var("NONSECURE_USE_OF_DEVELOPMENT_SEED_1").unwrap()).unwrap());
     let seed_balance = iota.get_balance(&seed).finish().await.unwrap();
     println!("Account balance: {:?}i", seed_balance);
 }

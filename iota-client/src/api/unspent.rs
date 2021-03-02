@@ -1,8 +1,9 @@
 // Copyright 2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Client, Error, Result, Seed};
+use crate::{Client, Error, Result};
 use bee_message::prelude::Bech32Address;
+use crypto::slip10::Seed;
 
 /// Builder of get_unspent_address API
 pub struct GetUnspentAddressBuilder<'a> {
@@ -46,7 +47,7 @@ impl<'a> GetUnspentAddressBuilder<'a> {
         let result = loop {
             let addresses = self
                 .client
-                .find_addresses(self.seed)
+                .get_addresses(self.seed)
                 .with_account_index(account_index)
                 .with_range(index..index + 20)
                 .finish()

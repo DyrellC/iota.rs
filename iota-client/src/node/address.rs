@@ -1,11 +1,15 @@
 // Copyright 2021 IOTA Stiftung
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{parse_response, Client, Error, Result};
+use crate::{log_request, parse_response, Client, Error, Result};
 
 use bee_message::prelude::{Bech32Address, TransactionId, UTXOInput};
 
-use bee_rest_api::handlers::{balance_ed25519::BalanceForAddressResponse, outputs_ed25519::OutputsForAddressResponse};
+use bee_rest_api::handlers::api::v1::{
+    balance_ed25519::BalanceForAddressResponse, outputs_ed25519::OutputsForAddressResponse,
+};
+
+use log::info;
 
 use std::convert::TryInto;
 
@@ -25,13 +29,15 @@ impl<'a> GetAddressBuilder<'a> {
     /// reasons. User should sweep the address to reduce the amount of outputs.
     pub async fn balance(self, address: &Bech32Address) -> Result<BalanceForAddressResponse> {
         let mut url = self.client.get_node()?;
-        url.set_path(&format!("api/v1/addresses/{}", address));
+        let path = &format!("api/v1/addresses/{}", address);
+        url.set_path(path);
         let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct BalanceWrapper {
             data: BalanceForAddressResponse,
         }
+        log_request!("GET", path, resp);
         parse_response!(resp, 200 => {
             let r = resp.into_json::<BalanceWrapper>()?;
             Ok(r.data)
@@ -43,13 +49,15 @@ impl<'a> GetAddressBuilder<'a> {
     /// reasons. User should sweep the address to reduce the amount of outputs.
     pub async fn outputs(self, address: &Bech32Address) -> Result<Box<[UTXOInput]>> {
         let mut url = self.client.get_node()?;
-        url.set_path(&format!("api/v1/addresses/{}/outputs", address));
+        let path = &format!("api/v1/addresses/{}/outputs", address);
+        url.set_path(path);
         let resp = ureq::get(url.as_str()).call()?;
 
         #[derive(Debug, Serialize, Deserialize)]
         struct OutputWrapper {
             data: OutputsForAddressResponse,
         }
+        log_request!("GET", path, resp);
         parse_response!(resp, 200 => {
             let r = resp.into_json::<OutputWrapper>()?.data;
             r.output_ids.iter()

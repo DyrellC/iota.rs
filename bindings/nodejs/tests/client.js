@@ -5,18 +5,18 @@ const assert = require('assert')
 const seed = '256a818b2aac458941f7274985a410e57fb750f3a3a67969ece5bd9ae7eef5b2'
 
 const client = new ClientBuilder()
-  .node('http://localhost:14265')
+  .node('http://api.hornet-1.testnet.chrysalis2.com')
   .disableNodeSync()
   .brokerOptions({ timeout: 50 })
   .localPow(true)
   .build()
 
 describe('Client', () => {
-  it('gets network info', () => {
-    const info = client.networkInfo()
+  it('gets network info', async () => {
+    const info = await client.networkInfo()
     assert.strictEqual(typeof info, 'object')
     assert.strictEqual(info.localPow, true)
-    assert.strictEqual(info.bech32HRP, 'iota')
+    assert.strictEqual(info.bech32HRP, 'atoi')
     assert.strictEqual(info.minPowScore, 4000)
   })
 
@@ -26,14 +26,14 @@ describe('Client', () => {
     assertMessageId(tips[0])
   })
 
-  it('finds addresses', () => {
-    const addresses = client.findAddresses(seed)
+  it('get addresses', async () => {
+    const addresses = await client.getAddresses(seed)
       .accountIndex(0)
       .range(0, 5)
       .get()
     assert.strictEqual(Array.isArray(addresses), true)
-    assert.strictEqual(addresses.length, 10)
-    addresses.forEach(([address, _internal]) => assertAddress(address))
+    assert.strictEqual(addresses.length, 5)
+    addresses.forEach(assertAddress)
   })
 
   it('sends an indexation message with the high level API', async () => {
@@ -46,7 +46,7 @@ describe('Client', () => {
   })
 
   it('sends a value transaction and checks output balance', async () => {
-    const depositAddress = 'atoi1qzj86lzml2ktagye4mj0th6zymgka8lt96qre9yye0v8sawzmdu0ut90vm7'
+    const depositAddress = 'atoi1qzt0nhsf38nh6rs4p6zs5knqp6psgha9wsv74uajqgjmwc75ugupx3y7x0r'
     const message = await client
       .message()
       .seed(seed)
@@ -107,7 +107,7 @@ describe('Client', () => {
   })
 
   it('get address outputs', async () => {
-    const outputs = await client.getAddressOutputs('atoi1qzj86lzml2ktagye4mj0th6zymgka8lt96qre9yye0v8sawzmdu0ut90vm7')
+    const outputs = await client.getAddressOutputs('atoi1qzt0nhsf38nh6rs4p6zs5knqp6psgha9wsv74uajqgjmwc75ugupx3y7x0r')
     assert.strictEqual(Array.isArray(outputs), true)
     assert.strictEqual(outputs.length > 0, true)
     assert.strictEqual(typeof outputs[0], 'string')

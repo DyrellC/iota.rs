@@ -22,12 +22,11 @@ async fn main() {
 
     println!("This example uses dotenv, which is not safe for use in production.");
     dotenv().ok();
-    let seed =
-        Seed::from_bytes(&hex::decode(env::var("NONSECURE_USE_OF_DEVELOPMENT_SEED_1").unwrap()).unwrap()).unwrap();
+    let seed = Seed::from_bytes(&hex::decode(env::var("NONSECURE_USE_OF_DEVELOPMENT_SEED_1").unwrap()).unwrap());
 
     // split funds to own addresses
     let addresses = iota
-        .find_addresses(&seed)
+        .get_addresses(&seed)
         .with_account_index(0)
         .with_range(0..10)
         .finish()

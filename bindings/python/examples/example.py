@@ -13,7 +13,7 @@ LOCAL_NODE_URL = "http://0.0.0.0:14265"
 # USE THIS INSTEAD
 SEED = os.getenv('MY_IOTA_SEED')
 
-EMPTY_ADDRESS = "atoi1qzj86lzml2ktagye4mj0th6zymgka8lt96qre9yye0v8sawzmdu0ut90vm7"
+EMPTY_ADDRESS = "atoi1qzt0nhsf38nh6rs4p6zs5knqp6psgha9wsv74uajqgjmwc75ugupx3y7x0r"
 client = iota_client.Client(
     node=LOCAL_NODE_URL, node_sync_disabled=True)
 
@@ -28,9 +28,9 @@ def main():
     print('get_tips()')
     print(f'tips: {client.get_tips()}')
 
-    print('find_addresses')
-    address_changed_list = client.find_addresses(
-        seed=SEED, account_index=0, begin=0, end=10, get_all=True)
+    print('get_addresses')
+    address_changed_list = client.get_addresses(
+        seed=SEED, account_index=0, input_range_begin=0, input_range_end=10, get_all=True)
     print(f'address_changed list: {address_changed_list}')
 
     # Get the (address, changed ) for the first found address

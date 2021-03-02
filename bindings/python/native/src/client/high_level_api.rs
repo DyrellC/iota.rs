@@ -93,7 +93,7 @@ impl Client {
         }
         let rt = tokio::runtime::Runtime::new()?;
         if let Some(seed) = seed {
-            let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?)?;
+            let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?);
             rt.block_on(async { send_builder.with_seed(&seed).finish().await })?
                 .try_into()
         } else {
@@ -213,7 +213,7 @@ impl Client {
         initial_address_index: Option<usize>,
     ) -> Result<(String, usize)> {
         let rt = tokio::runtime::Runtime::new()?;
-        let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?)?;
+        let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?);
         let address_index = rt.block_on(async {
             self.client
                 .get_unspent_address(&seed)
@@ -224,7 +224,7 @@ impl Client {
         })?;
         Ok((address_index.0 .0, address_index.1))
     }
-    fn find_addresses(
+    fn get_addresses(
         &self,
         seed: String,
         account_index: Option<usize>,
@@ -232,7 +232,7 @@ impl Client {
         input_range_end: Option<usize>,
         get_all: Option<bool>,
     ) -> Result<Vec<(String, Option<bool>)>> {
-        let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?)?;
+        let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?);
         if input_range_begin.is_some() ^ input_range_end.is_some() {
             return Err(Error {
                 error: PyErr::new::<exceptions::PyValueError, _>(
@@ -246,7 +246,7 @@ impl Client {
             let rt = tokio::runtime::Runtime::new()?;
             let addresses = rt.block_on(async {
                 self.client
-                    .find_addresses(&seed)
+                    .get_addresses(&seed)
                     .with_account_index(account_index.unwrap_or(0))
                     .with_range(begin..end)
                     .get_all()
@@ -260,7 +260,7 @@ impl Client {
             let rt = tokio::runtime::Runtime::new()?;
             let addresses = rt.block_on(async {
                 self.client
-                    .find_addresses(&seed)
+                    .get_addresses(&seed)
                     .with_account_index(account_index.unwrap_or(0))
                     .with_range(begin..end)
                     .finish()
@@ -279,7 +279,7 @@ impl Client {
         initial_address_index: Option<usize>,
     ) -> Result<u64> {
         let rt = tokio::runtime::Runtime::new()?;
-        let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?)?;
+        let seed = RustSeed::from_bytes(&hex::decode(&seed[..])?);
         let balance = rt.block_on(async {
             self.client
                 .get_balance(&seed)
