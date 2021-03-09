@@ -5,7 +5,9 @@ use crate::error::*;
 use crate::{String, ToString};
 use crate::Vec;
 use crate::{Arc, RwLock};
+use crate::HashSet;
 
+use core::iter::FromIterator;
 
 /// Network of the Iota nodes belong to
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Hash, Eq)]
