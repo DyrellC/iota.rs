@@ -1,12 +1,17 @@
 //! The Client module to connect through IRI with API usages
-use crate::core::*;
+use crate::api::*;
 use crate::error::*;
 use crate::extended::*;
 use crate::response::*;
 use crate::util::tx_trytes;
+use crate::{String, ToString};
+use crate::Vec;
+use crate::HashSet;
+use crate::{Arc, RwLock};
 
-use std::collections::HashSet;
-use std::sync::{Arc, RwLock};
+
+//use std::collections::HashSet;
+//use std::sync::{Arc, RwLock};
 
 use bee_crypto::ternary::Hash;
 use bee_signing::ternary::seed::Seed;
@@ -72,12 +77,12 @@ impl Client {
 
     /// Add a node to the node pool.
     pub fn add_node(&mut self, uri: &str) -> Result<bool> {
-        Ok(self.pool.write().unwrap().insert(uri.to_string()))
+        Ok(self.pool.write().insert(uri.to_string()))
     }
 
     /// Remove a node from the node pool.
     pub fn remove_node(&mut self, uri: &str) -> Result<bool> {
-        Ok(self.pool.write().unwrap().remove(uri))
+        Ok(self.pool.write().remove(uri))
     }
 
     pub(crate) fn get_node(&self) -> Result<String> {
@@ -85,7 +90,6 @@ impl Client {
         Ok(self
             .pool
             .read()
-            .unwrap()
             .iter()
             .next()
             .ok_or(Error::NodePoolEmpty)?
@@ -124,10 +128,10 @@ impl Client {
     /// * [`tags`] - (Optional) Tags to search for
     /// * [`approvees`] - (Optional) Child transactions to search for
     ///
-    /// [`bundles`]: ../core/struct.FindTransactionsBuilder.html#method.bundles
-    /// [`addresses`]: ../core/struct.FindTransactionsBuilder.html#method.addresses
-    /// [`tags`]: ../core/struct.FindTransactionsBuilder.html#method.tags
-    /// [`approvees`]: ../core/struct.FindTransactionsBuilder.html#method.approvees
+    /// [`bundles`]: ../api/struct.FindTransactionsBuilder.html#method.bundles
+    /// [`addresses`]: ../api/struct.FindTransactionsBuilder.html#method.addresses
+    /// [`tags`]: ../api/struct.FindTransactionsBuilder.html#method.tags
+    /// [`approvees`]: ../api/struct.FindTransactionsBuilder.html#method.approvees
     pub fn find_transactions(&self) -> FindTransactionsBuilder<'_> {
         FindTransactionsBuilder::new(self)
     }
@@ -243,10 +247,10 @@ impl Client {
     /// * [`trytes`] - Slice of transaction trytes. When sending transactions in a bundle,
     /// make sure that the trytes of the last transaction in the bundle are in index 0 of the array.
     ///
-    /// [`trunk_transaction`]: ../core/struct.AttachToTangleBuilder.html#method.trunk_transaction
-    /// [`branch_transaction`]: ../core/struct.AttachToTangleBuilder.html#method.branch_transaction
-    /// [`min_weight_magnitude`]: ../core/struct.AttachToTangleBuilder.html#method.min_weight_magnitude
-    /// [`trytes`]: ../core/struct.AttachToTangleBuilder.html#method.trytes
+    /// [`trunk_transaction`]: ../api/struct.AttachToTangleBuilder.html#method.trunk_transaction
+    /// [`branch_transaction`]: ../api/struct.AttachToTangleBuilder.html#method.branch_transaction
+    /// [`min_weight_magnitude`]: ../api/struct.AttachToTangleBuilder.html#method.min_weight_magnitude
+    /// [`trytes`]: ../api/struct.AttachToTangleBuilder.html#method.trytes
     pub fn attach_to_tangle(&self) -> AttachToTangleBuilder<'_> {
         AttachToTangleBuilder::new(self)
     }
@@ -259,9 +263,9 @@ impl Client {
     /// * [`threshold`] - (Optional) Confirmation threshold between 0 and 100, default is 100.
     /// * [`tips`] - (Optional) Tips whose history of transactions to traverse to find the balance
     ///
-    /// [`addresses`]: ../core/struct.GetBalancesBuilder.html#method.addresses
-    /// [`threshold`]: ../core/struct.GetBalancesBuilder.html#method.threshold
-    /// [`tips`]: ../core/struct.GetBalancesBuilder.html#method.tips
+    /// [`addresses`]: ../api/struct.GetBalancesBuilder.html#method.addresses
+    /// [`threshold`]: ../api/struct.GetBalancesBuilder.html#method.threshold
+    /// [`tips`]: ../api/struct.GetBalancesBuilder.html#method.tips
     pub fn get_balances(&self) -> GetBalancesBuilder<'_> {
         GetBalancesBuilder::new(self)
     }
@@ -274,8 +278,8 @@ impl Client {
     /// * [`transactions`] - List of transaction hashes for which you want to get the inclusion state
     /// * [`tips`] - (Optional) List of tip transaction hashes (including milestones) you want to search for
     ///
-    /// [`transactions`]: ../core/struct.GetInclusionStatesBuilder.html#method.transactions
-    /// [`tips`]: ../core/struct.GetInclusionStatesBuilder.html#method.tips
+    /// [`transactions`]: ../api/struct.GetInclusionStatesBuilder.html#method.transactions
+    /// [`tips`]: ../api/struct.GetInclusionStatesBuilder.html#method.tips
     pub fn get_inclusion_states(&self) -> GetInclusionStatesBuilder<'_> {
         GetInclusionStatesBuilder::new(self)
     }
@@ -312,8 +316,8 @@ impl Client {
     /// * [`reference`] - (Optional) Transaction hash from which to start the weighted random walk.
     /// Use this parameter to make sure the returned tip transaction hashes approve a given reference transaction
     ///
-    /// [`depth`]: ../core/struct.GetTransactionsToApproveBuilder.html#method.depth
-    /// [`reference`]: ../core/struct.GetTransactionsToApproveBuilder.html#method.reference
+    /// [`depth`]: ../api/struct.GetTransactionsToApproveBuilder.html#method.depth
+    /// [`reference`]: ../api/struct.GetTransactionsToApproveBuilder.html#method.reference
     pub fn get_transactions_to_approve(&self) -> GetTransactionsToApproveBuilder<'_> {
         GetTransactionsToApproveBuilder::new(self)
     }
@@ -322,7 +326,7 @@ impl Client {
     /// # Parameters
     /// * `hashes` - Transaction hashes
     ///
-    /// [`hashes`]: ../core/struct.GetTrytesBuilder.html#method.hashes
+    /// [`hashes`]: ../api/struct.GetTrytesBuilder.html#method.hashes
     pub async fn get_trytes(&self, hashes: &[Hash]) -> Result<GetTrytesResponse> {
         let hashes: Vec<String> = hashes
             .iter()
@@ -348,7 +352,7 @@ impl Client {
     /// # Parameters
     /// * [`trytes`] - Transaction trytes
     ///
-    /// [`trytes`]: ../core/struct.BroadcastTransactionsBuilder.html#method.trytes
+    /// [`trytes`]: ../api/struct.BroadcastTransactionsBuilder.html#method.trytes
     pub async fn broadcast_transactions(&self, trytes: &[Transaction]) -> Result<()> {
         let trytes: Vec<String> = trytes.iter().map(|tx| tx_trytes(tx)).collect();
         let body = json!({
@@ -366,7 +370,7 @@ impl Client {
     /// # Parameters
     /// * [`trytes`] - Transaction trytes
     ///
-    /// [`trytes`]: ../core/struct.StoreTransactionsBuilder.html#method.trytes
+    /// [`trytes`]: ../api/struct.StoreTransactionsBuilder.html#method.trytes
     pub async fn store_transactions(&self, trytes: &[Transaction]) -> Result<()> {
         let trytes: Vec<String> = trytes.iter().map(|tx| tx_trytes(tx)).collect();
         let body = json!({
@@ -425,7 +429,7 @@ impl Client {
     /// # Parameters
     /// * [`tails`] - Transaction hashes to check
     ///
-    /// [`tails`]: ../core/struct.ConsistencyBuilder.html#method.tails
+    /// [`tails`]: ../api/struct.ConsistencyBuilder.html#method.tails
     pub async fn check_consistency(&self, tails: &[Hash]) -> Result<ConsistencyResponse> {
         let tails: Vec<String> = tails
             .iter()

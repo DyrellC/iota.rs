@@ -1,4 +1,6 @@
 use crate::error::Result;
+use crate::{String, Vec};
+
 use bee_crypto::ternary::Hash;
 use bee_ternary::T3B1Buf;
 

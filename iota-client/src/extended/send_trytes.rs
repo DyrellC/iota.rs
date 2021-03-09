@@ -7,6 +7,7 @@ use bee_ternary::{T1B1Buf, TritBuf};
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 
 use crate::Client;
+use crate::Vec;
 
 /// Builder to construct sendTrytes API
 //#[derive(Debug)]

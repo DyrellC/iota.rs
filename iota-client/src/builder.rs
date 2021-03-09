@@ -2,10 +2,10 @@
 
 use crate::client::Client;
 use crate::error::*;
+use crate::{String, ToString};
+use crate::Vec;
+use crate::{Arc, RwLock};
 
-use std::collections::HashSet;
-use std::iter::FromIterator;
-use std::sync::{Arc, RwLock};
 
 /// Network of the Iota nodes belong to
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Hash, Eq)]

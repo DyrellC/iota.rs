@@ -1,4 +1,6 @@
 use crate::error::*;
+use crate::Vec;
+
 use bee_signing::ternary::seed::Seed;
 
 use crate::response::Input;

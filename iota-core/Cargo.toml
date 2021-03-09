@@ -6,6 +6,10 @@ edition = "2018"
 description = "Core library of IOTA"
 license = "Apache-2.0"
 
+[features]
+default = ["std"]
+std = ["iota-client/std"]
+
 [lib]
 name = "iota"
 

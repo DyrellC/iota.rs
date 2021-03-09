@@ -5,6 +5,7 @@ use bee_transaction::bundled::{Address, BundledTransaction as Transaction};
 
 use crate::response::{Input, Transfer};
 use crate::Client;
+use crate::Vec;
 
 /// Builder to construct Send API
 //#[derive(Debug)]

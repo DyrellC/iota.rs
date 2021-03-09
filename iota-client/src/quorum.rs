@@ -195,8 +195,8 @@ impl GetBalancesBuilder {
 /// * [`transactions`] - List of transaction hashes for which you want to get the inclusion state
 /// * [`tips`] - (Optional) List of tip transaction hashes (including milestones) you want to search for
 ///
-/// [`transactions`]: ../core/struct.GetInclusionStatesBuilder.html#method.transactions
-/// [`tips`]: ../core/struct.GetInclusionStatesBuilder.html#method.tips
+/// [`transactions`]: ../api/struct.GetInclusionStatesBuilder.html#method.transactions
+/// [`tips`]: ../api/struct.GetInclusionStatesBuilder.html#method.tips
 pub fn get_inclusion_states() -> GetInclusionStatesBuilder {
     GetInclusionStatesBuilder::new()
 }

@@ -5,7 +5,7 @@ const seed = 'RVORZ9SIIP9RCYMREUIXXVPQIPHVCNPQ9HZWYKFWYWZRE9JQKG9REPKIASHUUECPSQ
 const uri = 'https://nodes.comnet.thetangle.org'
 const bundleHash = 'MKQKKUKBRQTJEQZRSJCPOABSBEHRMDLRKFHHYYIGZPNKKCDTXHJQBORAX9KEFDBDBZDEWZFOKOCICAUBC'
 
-describe('core', () => {
+describe('api', () => {
     it('should get the node info', () => {
         client.addNode(uri)
         client.getNodeInfo().then(info => {

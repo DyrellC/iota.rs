@@ -2,8 +2,9 @@ use bee_ternary::tryte::TryteBuf;
 use bee_ternary::*;
 use bee_transaction::bundled::{BundledTransaction as Transaction, BundledTransactionField};
 use bee_transaction::Vertex;
+use crate::TryInto;
 
-use std::convert::TryInto;
+use crate::String;
 
 // TODO use bee-ternary once it porvides a method.
 /// Temporary util function to make a transaction trytes

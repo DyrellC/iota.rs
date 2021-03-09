@@ -8,6 +8,7 @@ use bee_signing::ternary::{
 use bee_transaction::bundled::{Address, BundledTransactionField};
 
 use crate::Client;
+use crate::ToOwned;
 
 /// Builder to construct GetNewAddress API
 //#[derive(Debug)]

@@ -1,9 +1,10 @@
 //! Error handling in iota-client crate.
 
-use std::fmt;
+use crate::fmt;
+use crate::String;
 
 /// Type alias of `Result` in iota-client
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
 /// Error type of the iota client crate.
@@ -29,7 +30,7 @@ pub enum Error {
     /// Error on Url type conversion
     UrlError,
     /// Error on IO
-    IoError(std::io::Error),
+    IoError(anyhow::Error),
 }
 
 impl fmt::Display for Error {
@@ -50,10 +51,11 @@ impl fmt::Display for Error {
     }
 }
 
-impl std::error::Error for Error {}
+//impl std::error:: for Error {}
 
+#[cfg(feature = "std")]
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        Error::IoError(error)
+        Error::IoError(error.into())
     }
 }

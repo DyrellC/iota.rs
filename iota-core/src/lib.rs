@@ -1,4 +1,6 @@
-//! IOTA core
+#![no_std]
+
+//! IOTA api
 
 #![deny(unused_extern_crates)]
 #![warn(

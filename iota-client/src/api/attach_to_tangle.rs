@@ -1,4 +1,6 @@
 use crate::error::Result;
+use crate::String;
+use crate::Vec;
 use bee_crypto::ternary::Hash;
 use bee_ternary::T3B1Buf;
 use bee_transaction::bundled::BundledTransaction as Transaction;

@@ -1,5 +1,10 @@
 //! Response types
-use crate::error::*;
+use crate::{
+    error::*,
+    String,
+    Vec
+};
+
 use bee_crypto::ternary::Hash;
 use bee_ternary::{T3B1Buf, TryteBuf};
 use bee_transaction::bundled::{
@@ -51,7 +56,7 @@ impl From<&Transaction> for TransactionDef {
     }
 }
 
-fn transaction_serializer<S>(x: &Vec<Transaction>, s: S) -> std::result::Result<S::Ok, S::Error>
+fn transaction_serializer<S>(x: &Vec<Transaction>, s: S) -> core::result::Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -173,7 +178,7 @@ pub struct FindTransactionsResponse {
 
 // TODO: remove this when iota_bundle_preview::Hash implements Serialize
 impl Serialize for FindTransactionsResponse {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -236,7 +241,7 @@ pub struct GetBalancesResponse {
 
 // TODO: remove this when iota_bundle_preview::Hash implements Serialize
 impl Serialize for GetBalancesResponse {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -446,7 +451,7 @@ pub struct GTTAResponse {
 
 // TODO: remove this when iota_bundle_preview::Hash implements Serialize
 impl Serialize for GTTAResponse {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
